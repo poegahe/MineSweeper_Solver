@@ -17,8 +17,7 @@ bottomRightY = 0
 #513 190 to check if we died
 #521 176 to check if we won
 
-#19 and 20 on X and 19 20 21 22 on Y to check color
-
+#20 on X and 23 on Y to check color
 
 def Setup():
     print("give board size. (first horizontal then vertical)")
@@ -30,41 +29,143 @@ def Setup():
         print("you need to give numbers in format: (horizontal size)x(vertical size)")
         return Setup()
 
-    bottomRightX = topLeftX + (boardSize[0] * 32 - 1)
-    bottomRightY = topLeftY + (boardSize[1] * 32 - 1)
+    bottomRightX = topLeftX + (int(boardSize[0]) * 32 - 1)
+    bottomRightY = topLeftY + (int(boardSize[1]) * 32 - 1)
     board = [["-" for _ in range(int(boardSize[0]))] for _ in range(int(boardSize[1]))]
     return board
 
 board = Setup()
 
-def getPixelToCheck(x, y)
+def GetBetterBoardPrint():
+    boardString = ""
+    for column in board:
+        boardString += "\n"
+        for cell in column:
+            boardString += " " + str(cell)
+    return boardString[1:]
+
+def GetPixelToCheck(x, y):
     xPos = (topLeftX + (x * 32)) + 20
-    yPos = (topLeftY + (y * 32)) + 20
+    yPos = (topLeftY + (y * 32)) + 23
     return xPos, yPos
 
-def GetState(x, y):
-    screenshot = pyautogui.screenshot()
-    xPos, yPos = getPixelToCheck(x, y)
+def GetMiddlePixel(x, y):
+    xPos = (topLeftX + (x * 32))
+    yPos = (topLeftY + (y * 32))
+    return xPos, yPos
+
+def GetState(x, y, screenshot):
+    xPos, yPos = GetPixelToCheck(x, y)
     pixel = screenshot.getpixel((xPos, yPos))
-    if screenshot.getpixel((xPos - 20, yPos - 20)) = (255, 255, 255) and pixel = (189, 189, 189):
+    if screenshot.getpixel((xPos - 20, yPos - 23)) == (255, 255, 255) and pixel == (189, 189, 189):
         return "-"
-    elif screenshot.getpixel((xPos - 20, yPos - 20)) = (255, 255, 255) and pixel = (0, 0, 0):
-        return "9"
-    elif pixel = (189, 189, 189):
+    elif screenshot.getpixel((xPos - 20, yPos - 23)) == (255, 255, 255) and pixel == (0, 0, 0):
+        return "@"
+    elif pixel == (189, 189, 189):
         return "0"
-    elif pixel = (0, 0, 255):
+    elif pixel == (0, 0, 255):
         return "1"
-    elif pixel = (0, 123, 0):
+    elif pixel == (0, 123, 0):
         return "2"
-    elif pixel = (255, 0, 0):
+    elif pixel == (255, 0, 0):
         return "3"
-    elif pixel = (0, 0, 123):
+    elif pixel == (0, 0, 123):
         return "4"
-    elif pixel = (123, 0, 0):
+    elif pixel == (123, 0, 0):
         return "5"
-    elif pixel = (0, 123, 123):
+    elif pixel == (0, 123, 123):
         return "6"
-    elif pixel = (0, 0, 0):
+    elif pixel == (0, 0, 0):
         return "7"
-    elif pixel = (123, 123, 123):
+    elif pixel == (123, 123, 123):
         return "8"
+
+def CheckAllUnknownCells():
+    screenshot = pyautogui.screenshot()
+    for y in range(len(board)):
+        for x in range(len(board[y])):
+            if board[y][x] == "-":
+                board[y][x] = GetState(x, y, screenshot)
+
+def ClickCell(x, y):
+    pyautogui.click(GetMiddlePixel(x, y))
+    CheckAllUnknownCells()
+
+def RightClickCell(x, y):
+    pyautogui.click(GetMiddlePixel(x, y), button = "right")
+    board[y][x] = "@"
+
+def GetAllNeigbours(x, y):
+    neigbours = []
+    neigbours.append(board[y-1][x-1])
+    neigbours.append(board[y-1][x])
+    neigbours.append(board[y-1][x+1])
+    neigbours.append(board[y][x-1])
+    neigbours.append(board[y][x+1])
+    neigbours.append(board[y+1][x-1])
+    neigbours.append(board[y+1][x])
+    neigbours.append(board[y+1][x+1])
+    return neigbours
+
+def RightPressNeigbours(x, y, state):
+    if board[y-1][x-1] == state:
+        RightClickCell(y-1, x+1)
+    if board[y-1][x] == state:
+        RightClickCell(y-1, x)
+    if board[y-1][x+1] == state:
+        RightClickCell(y-1, x+1)
+    if board[y][x-1] == state:
+        RightClickCell(y, x-1)
+    if board[y][x+1] == state:
+        RightClickCell(y, x+1)
+    if board[y+1][x-1] == state:
+        RightClickCell(y+1, x-1)
+    if board[y+1][x] == state:
+        RightClickCell(y+1, x)
+    if board[y+1][x+1] == state:
+        RightClickCell(y+1, x+1)
+
+def PressNeigbours(x, y, state):
+    if board[y-1][x-1] == state:
+        ClickCell(y-1, x+1)
+    if board[y-1][x] == state:
+        ClickCell(y-1, x)
+    if board[y-1][x+1] == state:
+        ClickCell(y-1, x+1)
+    if board[y][x-1] == state:
+        ClickCell(y, x-1)
+    if board[y][x+1] == state:
+        ClickCell(y, x+1)
+    if board[y+1][x-1] == state:
+        ClickCell(y+1, x-1)
+    if board[y+1][x] == state:
+        ClickCell(y+1, x)
+    if board[y+1][x+1] == state:
+        ClickCell(y+1, x+1)
+
+
+def AILoop():
+    ClickCell(0, 0)
+    loop = True
+    while loop == True:
+        screenshot = pyautogui.screenshot()
+        if screenshot.getpixel((521, 176)) == (0, 0, 0):
+            print("WINNER WINNER CHICKEN DINNER!!")
+            print(GetBetterBoardPrint())
+            loop = False
+        elif screenshot.getpixel((513, 190)) == (0, 0, 0):
+            print("Oh no, we died")
+            print(GetBetterBoardPrint())
+            loop = False
+        for y in range(len(board)):
+            for x in range(len(board[y])):
+                if board[y][x] == "-" or board[y][x] == "@":
+                    continue
+
+                neigbours = GetAllNeigbours(x, y)
+                if int(board[y][x]) == neigbours.count("-") - neigbours.count("@")
+                    RightPressNeigbours(x, y, "-")
+                elif int(board[y][x]) == neigbours.count("@"):
+                    PressNeigbours(x, y, "-")
+
+AILoop()
