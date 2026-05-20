@@ -163,7 +163,7 @@ def AILoop():
                     continue
 
                 neigbours = GetAllNeigbours(x, y)
-                if int(board[y][x]) == neigbours.count("-") - neigbours.count("@")
+                if int(board[y][x]) == neigbours.count("-") - neigbours.count("@"):
                     RightPressNeigbours(x, y, "-")
                 elif int(board[y][x]) == neigbours.count("@"):
                     PressNeigbours(x, y, "-")
