@@ -6,18 +6,47 @@ import keyboard
 
 topLeftX = 265 #this is in the top left of the top left cell not outside the field of cells
 topLeftY = 233
+topLeftXPixels = 0
+topLeftYPixels = 57
+topLeft = (265, 176)
+screenRegion = 0
+#cell size is 32 by 32 if website size is 80% and mine sweeper display is 200%
+# - is unknown, 0 is 0 bombs nearby same for 1 and 2 etc, 9 is flag
 
-#bottomRightX = 776 and bottomRightY = 744 this is for 16 by 16 cells
-bottomRightX = 0
-bottomRightY = 0
-
-#cell size is 32 by 32 if website size is 80% and min sweeper display is 200%
-# - is not down, 0 is 0 bombs nearby same for 1 and 2 etc, 8 is flag
+#(265, 176, 511, 568)
 
 #513 190 to check if we died
 #521 176 to check if we won
 
 #20 on X and 23 on Y to check color
+
+def region_from_corners(top_left, bottom_right):
+    """
+    Convert top-left and bottom-right coordinates into a PyAutoGUI region tuple.
+
+    Args:
+        top_left (tuple): (x1, y1) coordinates of the top-left corner.
+        bottom_right (tuple): (x2, y2) coordinates of the bottom-right corner.
+
+    Returns:
+        tuple: (left, top, width, height) suitable for PyAutoGUI's region parameter.
+    """
+    if not (isinstance(top_left, tuple) and isinstance(bottom_right, tuple)):
+        raise TypeError("Both coordinates must be tuples (x, y).")
+    if len(top_left) != 2 or len(bottom_right) != 2:
+        raise ValueError("Each coordinate must have exactly two values (x, y).")
+
+    x1, y1 = top_left
+    x2, y2 = bottom_right
+
+    # Ensure coordinates are valid
+    if x2 <= x1 or y2 <= y1:
+        raise ValueError("Bottom-right must be greater than top-left in both x and y.")
+
+    width = x2 - x1
+    height = y2 - y1
+
+    return (x1, y1, width, height)
 
 def Setup():
     print("give board size. (first horizontal then vertical)")
@@ -31,10 +60,16 @@ def Setup():
 
     bottomRightX = topLeftX + (int(boardSize[0]) * 32 - 1)
     bottomRightY = topLeftY + (int(boardSize[1]) * 32 - 1)
-    board = [["-" for _ in range(int(boardSize[0]))] for _ in range(int(boardSize[1]))]
-    return board
+    screenRegion = region_from_corners(topLeft, (bottomRightX, bottomRightY))
 
-board = Setup()
+
+    board = [["-" for _ in range(int(boardSize[0]))] for _ in range(int(boardSize[1]))]
+    return board, screenRegion
+
+
+
+board, screenRegion = Setup()
+pyautogui.PAUSE = 0.01
 
 def GetBetterBoardPrint():
     boardString = ""
@@ -45,8 +80,8 @@ def GetBetterBoardPrint():
     return boardString[1:]
 
 def GetPixelToCheck(x, y):
-    xPos = (topLeftX + (x * 32)) + 20
-    yPos = (topLeftY + (y * 32)) + 23
+    xPos = (topLeftXPixels + (x * 32)) + 20
+    yPos = (topLeftYPixels + (y * 32)) + 23
     return xPos, yPos
 
 def GetCellPixel(x, y):
@@ -80,7 +115,7 @@ def GetState(x, y, screenshot):
     elif pixel == (123, 123, 123):
         return "8"
 
-def CheckAllUnknownCells(screenshot = pyautogui.screenshot()):
+def CheckAllUnknownCells(screenshot):
     for y in range(len(board)):
         for x in range(len(board[y])):
             if board[y][x] == "-":
@@ -89,13 +124,9 @@ def CheckAllUnknownCells(screenshot = pyautogui.screenshot()):
 def ClickCell(x, y):
     pyautogui.click(GetCellPixel(x, y))
 
-    time.sleep(0.05)
-
 def RightClickCell(x, y):
     pyautogui.click(GetCellPixel(x, y), button = "right")
     board[y][x] = "@"
-
-    time.sleep(0.05)
 
 def GetAllNeighbours(x, y):
     neighbours = []
@@ -118,13 +149,14 @@ def AILoop():
     ClickCell(0, 0)
     loop = True
     while loop == True:
-        screenshot = pyautogui.screenshot()
+        time.sleep(0.1)
+        screenshot = pyautogui.screenshot(region=screenRegion)
         CheckAllUnknownCells(screenshot)
-        if screenshot.getpixel((521, 176)) == (0, 0, 0):
+        if screenshot.getpixel((256, 119)) == (0, 0, 0):
             print("WINNER WINNER CHICKEN DINNER!!")
             print(GetBetterBoardPrint())
             loop = False
-        elif screenshot.getpixel((513, 190)) == (0, 0, 0):
+        elif screenshot.getpixel((248, 133)) == (0, 0, 0):
             print("Oh no, we died")
             print(GetBetterBoardPrint())
             loop = False
