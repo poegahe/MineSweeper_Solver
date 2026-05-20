@@ -49,7 +49,7 @@ def GetPixelToCheck(x, y):
     yPos = (topLeftY + (y * 32)) + 23
     return xPos, yPos
 
-def GetMiddlePixel(x, y):
+def GetCellPixel(x, y):
     xPos = (topLeftX + (x * 32))
     yPos = (topLeftY + (y * 32))
     return xPos, yPos
@@ -80,68 +80,38 @@ def GetState(x, y, screenshot):
     elif pixel == (123, 123, 123):
         return "8"
 
-def CheckAllUnknownCells():
-    screenshot = pyautogui.screenshot()
+def CheckAllUnknownCells(screenshot = pyautogui.screenshot()):
     for y in range(len(board)):
         for x in range(len(board[y])):
             if board[y][x] == "-":
                 board[y][x] = GetState(x, y, screenshot)
 
 def ClickCell(x, y):
-    pyautogui.click(GetMiddlePixel(x, y))
-    CheckAllUnknownCells()
+    pyautogui.click(GetCellPixel(x, y))
+
+    time.sleep(0.05)
 
 def RightClickCell(x, y):
-    pyautogui.click(GetMiddlePixel(x, y), button = "right")
+    pyautogui.click(GetCellPixel(x, y), button = "right")
     board[y][x] = "@"
 
-def GetAllNeigbours(x, y):
-    neigbours = []
-    neigbours.append(board[y-1][x-1])
-    neigbours.append(board[y-1][x])
-    neigbours.append(board[y-1][x+1])
-    neigbours.append(board[y][x-1])
-    neigbours.append(board[y][x+1])
-    neigbours.append(board[y+1][x-1])
-    neigbours.append(board[y+1][x])
-    neigbours.append(board[y+1][x+1])
-    return neigbours
+    time.sleep(0.05)
 
-def RightPressNeigbours(x, y, state):
-    if board[y-1][x-1] == state:
-        RightClickCell(y-1, x+1)
-    if board[y-1][x] == state:
-        RightClickCell(y-1, x)
-    if board[y-1][x+1] == state:
-        RightClickCell(y-1, x+1)
-    if board[y][x-1] == state:
-        RightClickCell(y, x-1)
-    if board[y][x+1] == state:
-        RightClickCell(y, x+1)
-    if board[y+1][x-1] == state:
-        RightClickCell(y+1, x-1)
-    if board[y+1][x] == state:
-        RightClickCell(y+1, x)
-    if board[y+1][x+1] == state:
-        RightClickCell(y+1, x+1)
+def GetAllNeighbours(x, y):
+    neighbours = []
+    directions = [
+        (-1, -1), (0, -1), (1, -1),
+        (-1,  0),          (1,  0),
+        (-1,  1), (0,  1), (1,  1)
+    ]
 
-def PressNeigbours(x, y, state):
-    if board[y-1][x-1] == state:
-        ClickCell(y-1, x+1)
-    if board[y-1][x] == state:
-        ClickCell(y-1, x)
-    if board[y-1][x+1] == state:
-        ClickCell(y-1, x+1)
-    if board[y][x-1] == state:
-        ClickCell(y, x-1)
-    if board[y][x+1] == state:
-        ClickCell(y, x+1)
-    if board[y+1][x-1] == state:
-        ClickCell(y+1, x-1)
-    if board[y+1][x] == state:
-        ClickCell(y+1, x)
-    if board[y+1][x+1] == state:
-        ClickCell(y+1, x+1)
+    for dx, dy in directions:
+        newX = x + dx
+        newY = y + dy
+
+        if 0 <= newX < len(board[0]) and 0 <= newY < len(board):
+            neighbours.append((newX, newY, board[newY][newX]))
+    return neighbours
 
 
 def AILoop():
@@ -149,6 +119,7 @@ def AILoop():
     loop = True
     while loop == True:
         screenshot = pyautogui.screenshot()
+        CheckAllUnknownCells(screenshot)
         if screenshot.getpixel((521, 176)) == (0, 0, 0):
             print("WINNER WINNER CHICKEN DINNER!!")
             print(GetBetterBoardPrint())
@@ -162,10 +133,21 @@ def AILoop():
                 if board[y][x] == "-" or board[y][x] == "@":
                     continue
 
-                neigbours = GetAllNeigbours(x, y)
-                if int(board[y][x]) == neigbours.count("-") - neigbours.count("@"):
-                    RightPressNeigbours(x, y, "-")
-                elif int(board[y][x]) == neigbours.count("@"):
-                    PressNeigbours(x, y, "-")
+                neighbours = GetAllNeighbours(x, y)
+
+                flagCount = sum(1 for n in neighbours if n[2] == "@")
+                unknownCount = sum(1 for n in neighbours if n[2] == "-")
+
+                if unknownCount == 0:
+                    continue
+
+                if int(board[y][x]) == unknownCount + flagCount:
+                    for nx, ny, state in neighbours:
+                        if state == "-":
+                            RightClickCell(nx, ny)
+                elif int(board[y][x]) == flagCount:
+                    for nx, ny, state in neighbours:
+                        if state == "-":
+                            ClickCell(nx, ny)
 
 AILoop()
