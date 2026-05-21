@@ -73,8 +73,8 @@ def Setup():
 
 board, screenRegion = Setup()
 
-#pyautogui.screenshot('my_screenshot.png', region = screenRegion)
-pyautogui.PAUSE = 0.05
+pyautogui.screenshot('my_screenshot.png', region = screenRegion)
+pyautogui.PAUSE = 0.5
 
 def GetBetterBoardPrint(newBoard):
     boardString = ""
@@ -201,8 +201,7 @@ def AILoop():
     ClickCell(0, 0)
     loop = True
     while loop == True:
-        rule = False
-        time.sleep(0.05)
+        time.sleep(0.1)
         screenshot = pyautogui.screenshot(region=screenRegion)
         CheckAllUnknownCells(screenshot)
 
@@ -216,33 +215,8 @@ def AILoop():
             #print(GetBetterBoardPrint())
             loop = False
             break
-        for y in range(len(board)):
-            for x in range(len(board[y])):
-
-                if not board[y][x] == "-" and not board[y][x] == "@":
-                    neighbours = GetAllNeighbours(x, y, board)
-
-                    flagCount = sum(1 for n in neighbours if n[2] == "@")
-                    unknownCount = sum(1 for n in neighbours if n[2] == "-")
-
-                    if int(board[y][x]) == unknownCount + flagCount:
-                        for nx, ny, state in neighbours:
-                            if state == "-":
-                                RightClickCell(nx, ny)
-                                screenshot = pyautogui.screenshot(region=screenRegion)
-                                CheckAllUnknownCells(screenshot)
-                                rule = True
-                    elif int(board[y][x]) == flagCount:
-                        for nx, ny, state in neighbours:
-                            if state == "-":
-                                ClickCell(nx, ny)
-                                screenshot = pyautogui.screenshot(region=screenRegion)
-                                CheckAllUnknownCells(screenshot)
-                                rule = True
 
         constraints = []
-        if rule:
-            continue
         for y in range(len(board)):
             for x in range(len(board[y])):
 
@@ -266,8 +240,6 @@ def AILoop():
 
         for cluster_unsort in clusters:
             cluster = sorted(cluster_unsort, key=lambda p: (p[0], p[1]))
-            if len(cluster) > 18:
-                cluster = cluster[:18]
 
             print("CLUSTER")
             print(cluster)
@@ -318,11 +290,10 @@ def AILoop():
                             always_bomb[i] = False
 
         for i, (x, y) in enumerate(cluster):
-            if not rule:
-                if always_bomb[i]:
-                    RightClickCell(x, y)
-                elif never_bomb[i]:
-                    ClickCell(x, y)
+            if always_bomb[i]:
+                RightClickCell(x, y)
+            elif never_bomb[i]:
+                ClickCell(x, y)
 
 
 
