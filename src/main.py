@@ -3,6 +3,7 @@ from enum import Enum
 import pyautogui
 import time
 import keyboard
+from itertools import product
 
 topLeftX = 265 #this is in the top left of the top left cell not outside the field of cells
 topLeftY = 233
@@ -19,6 +20,8 @@ screenRegion = 0
 #521 176 to check if we won
 
 #20 on X and 23 on Y to check color
+
+#pyautogui.displayMousePosition()
 
 def region_from_corners(top_left, bottom_right):
     """
@@ -69,6 +72,8 @@ def Setup():
 
 
 board, screenRegion = Setup()
+
+pyautogui.screenshot('my_screenshot.png', region = screenRegion)
 pyautogui.PAUSE = 0.01
 
 def GetBetterBoardPrint():
@@ -128,7 +133,7 @@ def RightClickCell(x, y):
     pyautogui.click(GetCellPixel(x, y), button = "right")
     board[y][x] = "@"
 
-def GetAllNeighbours(x, y):
+def GetAllNeighbours(x, y, newBoard):
     neighbours = []
     directions = [
         (-1, -1), (0, -1), (1, -1),
@@ -140,8 +145,8 @@ def GetAllNeighbours(x, y):
         newX = x + dx
         newY = y + dy
 
-        if 0 <= newX < len(board[0]) and 0 <= newY < len(board):
-            neighbours.append((newX, newY, board[newY][newX]))
+        if 0 <= newX < len(newBoard[0]) and 0 <= newY < len(newBoard):
+            neighbours.append((newX, newY, newBoard[newY][newX]))
     return neighbours
 
 
@@ -152,20 +157,25 @@ def AILoop():
         time.sleep(0.1)
         screenshot = pyautogui.screenshot(region=screenRegion)
         CheckAllUnknownCells(screenshot)
-        if screenshot.getpixel((256, 119)) == (0, 0, 0):
+
+        combinations = []
+        numbersToCheck = []
+        unknownsToCheck = []
+
+        if screenshot.getpixel((int(round(screenRegion[2] / 2) + 1.0), 0)) == (0, 0, 0):
             print("WINNER WINNER CHICKEN DINNER!!")
-            print(GetBetterBoardPrint())
+            #print(GetBetterBoardPrint())
             loop = False
-        elif screenshot.getpixel((248, 133)) == (0, 0, 0):
+        elif screenshot.getpixel((int(round(screenRegion[2] / 2) - 7.0), 14)) == (0, 0, 0):
             print("Oh no, we died")
-            print(GetBetterBoardPrint())
+            #print(GetBetterBoardPrint())
             loop = False
         for y in range(len(board)):
             for x in range(len(board[y])):
                 if board[y][x] == "-" or board[y][x] == "@":
                     continue
 
-                neighbours = GetAllNeighbours(x, y)
+                neighbours = GetAllNeighbours(x, y, board)
 
                 flagCount = sum(1 for n in neighbours if n[2] == "@")
                 unknownCount = sum(1 for n in neighbours if n[2] == "-")
@@ -173,6 +183,12 @@ def AILoop():
                 if unknownCount == 0:
                     continue
 
+                numbersToCheck.append([x, y])
+                for nx, ny, state in neighbours:
+                    if state == "-" and [nx, ny] not in unknownsToCheck:
+                        unknownsToCheck.append([nx, ny])
+
+                """
                 if int(board[y][x]) == unknownCount + flagCount:
                     for nx, ny, state in neighbours:
                         if state == "-":
@@ -181,5 +197,61 @@ def AILoop():
                     for nx, ny, state in neighbours:
                         if state == "-":
                             ClickCell(nx, ny)
+                """
+
+        combinations = list(product([False, True], repeat=len(unknownsToCheck)))
+        possibleCombinations = []
+        for combination in combinations:
+            newBoard = [[state for state in row] for row in board]
+
+            for i in range(len(combination)):
+                if combination[i]:
+                    x, y = unknownsToCheck[i]
+                    newBoard[y][x] = "@"
+
+            isPossible = True
+            for posX, posY in numbersToCheck:
+                neighbours = GetAllNeighbours(posX, posY, newBoard)
+                flagCount = sum(1 for n in neighbours if n[2] == "@")
+
+                if not int(newBoard[posY][posX]) == flagCount:
+                    isPossible = False
+                    break
+
+            if isPossible:
+                possibleCombinations.append(combination)
+
+        if len(possibleCombinations) == 1:
+            for i in range(len(possibleCombinations[0])):
+                if possibleCombinations[0][i]:
+                    x, y = unknownsToCheck[i]
+                    RightClickCell(x, y)
+                else:
+                    x, y = unknownsToCheck[i]
+                    ClickCell(x, y)
+            continue
+
+        n = len(unknownsToCheck)
+        alwaysBomb = [True] * n
+        neverBomb = [True] * n
+
+        if not any(alwaysBomb) and not any(neverBomb):
+            break
+
+        for combination in possibleCombinations:
+            for i in range(n):
+                if combination[i]:
+                    neverBomb[i] = False
+                else:
+                    alwaysBomb[i] = False
+
+        for i in range(n):
+            x, y = unknownsToCheck[i]
+
+            if alwaysBomb[i]:
+                RightClickCell(x, y)
+
+            elif neverBomb[i]:
+                ClickCell(x, y)
 
 AILoop()
